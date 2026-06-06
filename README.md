@@ -22,19 +22,24 @@ Toy implementation of a **well log database** for geoscientists — ingest LAS f
 
 ```mermaid
 flowchart LR
-  subgraph ingest [Ingestion]
-    LAS[LAS file] --> Parser[las_parser.py]
-    Parser --> PG[(PostgreSQL)]
-    ParserCas[las_parser_cas.py] --> PG
-    ParserCas --> Cas[(Cassandra)]
+  subgraph ingestPipeline ["Ingestion"]
+    LASFile["LAS file"]
+    ParserPG["las_parser.py"]
+    ParserCas["las_parser_cas.py"]
+    PG[("PostgreSQL")]
+    Cas[("Cassandra")]
+    LASFile --> ParserPG --> PG
+    LASFile --> ParserCas
+    ParserCas --> PG
+    ParserCas --> Cas
   end
-  subgraph query [Query layer]
-    API[well_query.py / well_query_cas.py]
-    GUI[Streamlit app.py / app_cas.py]
+  subgraph queryLayer ["Query layer"]
+    WellQuery["well_query.py"]
+    StreamlitUI["Streamlit UI"]
   end
-  PG --> API
-  Cas --> API
-  API --> GUI
+  PG --> WellQuery
+  Cas --> WellQuery
+  WellQuery --> StreamlitUI
 ```
 
 **Ingestion flow:** parse LAS header curves → resolve aliases via `mnemonic` / `mnemonic_name` → upsert well metadata → bulk-load depth-indexed values into `well_curve` (PostgreSQL) and optionally mirror curves to Cassandra.
